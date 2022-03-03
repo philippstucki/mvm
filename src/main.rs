@@ -1,7 +1,16 @@
 #[derive(Debug, Copy, Clone)]
+struct BranchCondition {
+    zero: bool,
+    negative: bool,
+    positive: bool,
+}
+
+#[derive(Debug, Copy, Clone)]
 enum Opcode {
-    PushConstant(u16),
+    PushConstant(i16),
     Add,
+    JumpConditional(BranchCondition, u16),
+    Halt,
 }
 
 #[derive(Debug)]
@@ -10,7 +19,7 @@ struct Program {
 }
 
 struct Vm {
-    stack: Vec<u16>,
+    stack: Vec<i16>,
     pc: usize,
 }
 
@@ -26,12 +35,14 @@ fn run_program(program: Program) {
         }
 
         let opcode = program.opcodes[vm.pc];
+        vm.pc += 1;
 
         match opcode {
             Opcode::PushConstant(value) => {
                 println!("op: push const {}", value);
                 vm.stack.push(value);
             }
+
             Opcode::Add => {
                 println!("op: add");
                 let op1 = vm.stack.pop();
@@ -40,24 +51,67 @@ fn run_program(program: Program) {
                     vm.stack.push(op1.unwrap() + op2.unwrap());
                 } else {
                     println!("Add: not enough arguments");
+                    break;
                 }
             }
+
+            Opcode::JumpConditional(branch_condition, address) => {
+                if let Some(op) = vm.stack.pop() {
+                    vm.stack.push(op);
+                    if (branch_condition.negative && op < 0)
+                        || (branch_condition.zero && op == 0)
+                        || (branch_condition.positive && op > 0)
+                    {
+                        vm.pc = address as usize;
+                    }
+                } else {
+                    println!("JumpConditional: not enough arguments");
+                    break;
+                }
+            }
+
+            Opcode::Halt => {
+                break;
+            }
+
+            _ => println!("op: not implemented ({:?})", opcode),
         }
-        vm.pc += 1;
     }
 
     println!("{:?}", vm.stack);
 }
 
 fn main() {
-    let test: Program = Program {
+    let add_ints: Program = Program {
         opcodes: vec![
-            Opcode::PushConstant(4),
-            Opcode::PushConstant(3),
+            /* 0 */
+            Opcode::PushConstant(99),
+            /* 1 */
+            Opcode::PushConstant(1),
+            /* 2 */
             Opcode::Add,
         ],
     };
+    run_program(add_ints);
 
-    // println!("{:?}", test);
-    run_program(test)
+    let int_sum: Program = Program {
+        opcodes: vec![
+            /* 0 */
+            Opcode::PushConstant(1),
+            /* 1 */
+            Opcode::PushConstant(1),
+            /* 2 */
+            Opcode::Add,
+            /* 3 */
+            Opcode::JumpConditional(
+                BranchCondition {
+                    zero: false,
+                    negative: false,
+                    positive: true,
+                },
+                1,
+            ),
+        ],
+    };
+    run_program(int_sum);
 }

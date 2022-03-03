@@ -8,7 +8,10 @@ struct BranchCondition {
 #[derive(Debug, Copy, Clone)]
 enum Opcode {
     PushConstant(i16),
+    Pop,
+    Dup,
     Add,
+    Subtract,
     JumpConditional(BranchCondition, u16),
     Halt,
 }
@@ -35,20 +38,39 @@ fn run_program(program: Program) {
         }
 
         let opcode = program.opcodes[vm.pc];
+        print!("{:04}: {:?}", vm.pc, opcode);
+
         vm.pc += 1;
 
         match opcode {
             Opcode::PushConstant(value) => {
-                println!("op: push const {}", value);
                 vm.stack.push(value);
             }
 
+            Opcode::Pop => {
+                vm.stack.pop();
+            }
+
+            Opcode::Dup => {
+                vm.stack.push(vm.stack[vm.stack.len() - 1]);
+            }
+
             Opcode::Add => {
-                println!("op: add");
                 let op1 = vm.stack.pop();
                 let op2 = vm.stack.pop();
                 if op1.is_some() && op2.is_some() {
                     vm.stack.push(op1.unwrap() + op2.unwrap());
+                } else {
+                    println!("Add: not enough arguments");
+                    break;
+                }
+            }
+
+            Opcode::Subtract => {
+                let op1 = vm.stack.pop();
+                let op2 = vm.stack.pop();
+                if op1.is_some() && op2.is_some() {
+                    vm.stack.push(op1.unwrap() - op2.unwrap());
                 } else {
                     println!("Add: not enough arguments");
                     break;
@@ -73,12 +95,12 @@ fn run_program(program: Program) {
             Opcode::Halt => {
                 break;
             }
-
-            _ => println!("op: not implemented ({:?})", opcode),
         }
+
+        println!();
     }
 
-    println!("{:?}", vm.stack);
+    println!("{:?} \n", vm.stack);
 }
 
 fn main() {
@@ -99,18 +121,18 @@ fn main() {
             /* 0 */
             Opcode::PushConstant(1),
             /* 1 */
-            Opcode::PushConstant(1),
+            Opcode::Dup,
             /* 2 */
             Opcode::Add,
             /* 3 */
-            Opcode::JumpConditional(
-                BranchCondition {
-                    zero: false,
-                    negative: false,
-                    positive: true,
-                },
-                1,
-            ),
+            // Opcode::JumpConditional(
+            //     BranchCondition {
+            //         zero: false,
+            //         negative: false,
+            //         positive: true,
+            //     },
+            //     1,
+            // ),
         ],
     };
     run_program(int_sum);

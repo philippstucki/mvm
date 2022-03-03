@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 enum Opcode {
     PushConstant(u16),
     Add,
@@ -11,12 +11,22 @@ struct Program {
 
 struct Vm {
     stack: Vec<u16>,
+    pc: usize,
 }
 
 fn run_program(program: Program) {
-    let mut vm = Vm { stack: Vec::new() };
+    let mut vm = Vm {
+        stack: Vec::new(),
+        pc: 0,
+    };
 
-    for opcode in program.opcodes.into_iter() {
+    loop {
+        if vm.pc >= program.opcodes.len() {
+            break;
+        }
+
+        let opcode = program.opcodes[vm.pc];
+
         match opcode {
             Opcode::PushConstant(value) => {
                 println!("op: push const {}", value);
@@ -33,6 +43,7 @@ fn run_program(program: Program) {
                 }
             }
         }
+        vm.pc += 1;
     }
 
     println!("{:?}", vm.stack);

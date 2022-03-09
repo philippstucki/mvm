@@ -8,11 +8,18 @@ struct BranchCondition {
 #[derive(Debug, Copy, Clone)]
 enum Opcode {
     PushConstant(i16),
-    Pop,
-    Dup,
+
+    Drop,
+    Dup(u8),
+    Swap,
+
     Add,
     Subtract,
-    JumpConditional(BranchCondition, u16),
+    Multiply,
+
+    BranchNotZero(u16),
+
+    DumpStack,
     Halt,
 }
 
@@ -28,7 +35,7 @@ struct Vm {
 
 fn run_program(program: Program) {
     let mut vm = Vm {
-        stack: Vec::new(),
+        stack: Vec::with_capacity(200),
         pc: 0,
     };
 
@@ -47,12 +54,19 @@ fn run_program(program: Program) {
                 vm.stack.push(value);
             }
 
-            Opcode::Pop => {
+            Opcode::Drop => {
                 vm.stack.pop();
             }
 
-            Opcode::Dup => {
-                vm.stack.push(vm.stack[vm.stack.len() - 1]);
+            Opcode::Dup(idx) => {
+                vm.stack.push(vm.stack[vm.stack.len() - 1 - (idx as usize)]);
+            }
+
+            Opcode::Swap => {
+                let op1 = vm.stack.pop().unwrap();
+                let op2 = vm.stack.pop().unwrap();
+                vm.stack.push(op1);
+                vm.stack.push(op2);
             }
 
             Opcode::Add => {
@@ -61,7 +75,7 @@ fn run_program(program: Program) {
                 if op1.is_some() && op2.is_some() {
                     vm.stack.push(op1.unwrap() + op2.unwrap());
                 } else {
-                    println!("Add: not enough arguments");
+                    println!("\nAdd: not enough arguments");
                     break;
                 }
             }
@@ -72,24 +86,26 @@ fn run_program(program: Program) {
                 if op1.is_some() && op2.is_some() {
                     vm.stack.push(op1.unwrap() - op2.unwrap());
                 } else {
-                    println!("Add: not enough arguments");
+                    println!("\nSubtract: not enough arguments");
                     break;
                 }
             }
 
-            Opcode::JumpConditional(branch_condition, address) => {
-                if let Some(op) = vm.stack.pop() {
-                    vm.stack.push(op);
-                    if (branch_condition.negative && op < 0)
-                        || (branch_condition.zero && op == 0)
-                        || (branch_condition.positive && op > 0)
-                    {
-                        vm.pc = address as usize;
-                    }
-                } else {
-                    println!("JumpConditional: not enough arguments");
-                    break;
+            Opcode::Multiply => {
+                let op1 = vm.stack.pop().unwrap();
+                let op2 = vm.stack.pop().unwrap();
+                vm.stack.push(op1 * op2);
+            }
+
+            Opcode::BranchNotZero(destination) => {
+                let op = vm.stack.pop().unwrap();
+                if op != 0 {
+                    vm.pc = destination as usize;
                 }
+            }
+
+            Opcode::DumpStack => {
+                println!("\n{:?}", vm.stack);
             }
 
             Opcode::Halt => {
@@ -104,36 +120,75 @@ fn run_program(program: Program) {
 }
 
 fn main() {
-    let add_ints: Program = Program {
-        opcodes: vec![
-            /* 0 */
-            Opcode::PushConstant(99),
-            /* 1 */
-            Opcode::PushConstant(1),
-            /* 2 */
-            Opcode::Add,
-        ],
-    };
-    run_program(add_ints);
+    // let add_ints: Program = Program {
+    //     opcodes: vec![
+    //         Opcode::PushConstant(-199),
+    //         Opcode::PushConstant(1),
+    //         Opcode::Swap,
+    //         Opcode::PushConstant(99),
+    //         Opcode::Add,
+    //         Opcode::Swap,
+    //         Opcode::Drop,
+    //     ],
+    // };
+    // run_program(add_ints);
 
-    let int_sum: Program = Program {
+    let mul_ints: Program = Program {
         opcodes: vec![
-            /* 0 */
-            Opcode::PushConstant(1),
-            /* 1 */
-            Opcode::Dup,
-            /* 2 */
-            Opcode::Add,
-            /* 3 */
-            // Opcode::JumpConditional(
-            //     BranchCondition {
-            //         zero: false,
-            //         negative: false,
-            //         positive: true,
-            //     },
-            //     1,
-            // ),
+            Opcode::PushConstant(3),
+            Opcode::PushConstant(4),
+            Opcode::Multiply,
         ],
     };
-    run_program(int_sum);
+    run_program(mul_ints);
+
+    // let int_sum: Program = Program {
+    //     opcodes: vec![
+    //         // init: [max, i, sum]
+    //         Opcode::PushConstant(6),
+    //         Opcode::PushConstant(1),
+    //         Opcode::PushConstant(0),
+    //         // sum += i
+    //         Opcode::Dup(1),
+    //         Opcode::Add,
+    //         // i++
+    //         Opcode::Swap,
+    //         Opcode::PushConstant(1),
+    //         Opcode::Add,
+    //         Opcode::Swap,
+    //         // i <= max ?
+    //         Opcode::Dup(2),
+    //         Opcode::PushConstant(1),
+    //         Opcode::Add,
+    //         Opcode::Dup(2),
+    //         Opcode::DumpStack,
+    //         Opcode::Subtract,
+    //         Opcode::BranchNotZero(3),
+    //     ],
+    // };
+    // run_program(int_sum);
+
+    let factorial: Program = Program {
+        opcodes: vec![
+            // init: [max, i, prod]
+            Opcode::PushConstant(7),
+            Opcode::PushConstant(1),
+            Opcode::PushConstant(1),
+            // sum *= i
+            Opcode::Dup(1),
+            Opcode::Multiply,
+            // i++
+            Opcode::Swap,
+            Opcode::PushConstant(1),
+            Opcode::Add,
+            Opcode::Swap,
+            // i <= max ?
+            Opcode::Dup(2),
+            Opcode::Dup(2),
+            Opcode::DumpStack,
+            Opcode::Subtract,
+            Opcode::BranchNotZero(3),
+        ],
+    };
+    run_program(factorial);
 }

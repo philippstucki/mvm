@@ -1,123 +1,4 @@
-#[derive(Debug, Copy, Clone)]
-struct BranchCondition {
-    zero: bool,
-    negative: bool,
-    positive: bool,
-}
-
-#[derive(Debug, Copy, Clone)]
-enum Opcode {
-    PushConstant(i16),
-
-    Drop,
-    Dup(u8),
-    Swap,
-
-    Add,
-    Subtract,
-    Multiply,
-
-    BranchNotZero(u16),
-
-    DumpStack,
-    Halt,
-}
-
-#[derive(Debug)]
-struct Program {
-    opcodes: Vec<Opcode>,
-}
-
-struct Vm {
-    stack: Vec<i16>,
-    pc: usize,
-}
-
-fn run_program(program: Program) {
-    let mut vm = Vm {
-        stack: Vec::with_capacity(200),
-        pc: 0,
-    };
-
-    loop {
-        if vm.pc >= program.opcodes.len() {
-            break;
-        }
-
-        let opcode = program.opcodes[vm.pc];
-        print!("{:04}: {:?}", vm.pc, opcode);
-
-        vm.pc += 1;
-
-        match opcode {
-            Opcode::PushConstant(value) => {
-                vm.stack.push(value);
-            }
-
-            Opcode::Drop => {
-                vm.stack.pop();
-            }
-
-            Opcode::Dup(idx) => {
-                vm.stack.push(vm.stack[vm.stack.len() - 1 - (idx as usize)]);
-            }
-
-            Opcode::Swap => {
-                let op1 = vm.stack.pop().unwrap();
-                let op2 = vm.stack.pop().unwrap();
-                vm.stack.push(op1);
-                vm.stack.push(op2);
-            }
-
-            Opcode::Add => {
-                let op1 = vm.stack.pop();
-                let op2 = vm.stack.pop();
-                if op1.is_some() && op2.is_some() {
-                    vm.stack.push(op1.unwrap() + op2.unwrap());
-                } else {
-                    println!("\nAdd: not enough arguments");
-                    break;
-                }
-            }
-
-            Opcode::Subtract => {
-                let op1 = vm.stack.pop();
-                let op2 = vm.stack.pop();
-                if op1.is_some() && op2.is_some() {
-                    vm.stack.push(op1.unwrap() - op2.unwrap());
-                } else {
-                    println!("\nSubtract: not enough arguments");
-                    break;
-                }
-            }
-
-            Opcode::Multiply => {
-                let op1 = vm.stack.pop().unwrap();
-                let op2 = vm.stack.pop().unwrap();
-                vm.stack.push(op1 * op2);
-            }
-
-            Opcode::BranchNotZero(destination) => {
-                let op = vm.stack.pop().unwrap();
-                if op != 0 {
-                    vm.pc = destination as usize;
-                }
-            }
-
-            Opcode::DumpStack => {
-                println!("\n{:?}", vm.stack);
-            }
-
-            Opcode::Halt => {
-                break;
-            }
-        }
-
-        println!();
-    }
-
-    println!("{:?} \n", vm.stack);
-}
+mod vm;
 
 fn main() {
     // let add_ints: Program = Program {
@@ -133,14 +14,14 @@ fn main() {
     // };
     // run_program(add_ints);
 
-    let mul_ints: Program = Program {
+    let mul_ints: vm::Program = vm::Program {
         opcodes: vec![
-            Opcode::PushConstant(3),
-            Opcode::PushConstant(4),
-            Opcode::Multiply,
+            vm::Opcode::PushConstant(3),
+            vm::Opcode::PushConstant(4),
+            vm::Opcode::Multiply,
         ],
     };
-    run_program(mul_ints);
+    vm::run_program(mul_ints);
 
     // let int_sum: Program = Program {
     //     opcodes: vec![
@@ -168,27 +49,27 @@ fn main() {
     // };
     // run_program(int_sum);
 
-    let factorial: Program = Program {
+    let factorial: vm::Program = vm::Program {
         opcodes: vec![
             // init: [max, i, prod]
-            Opcode::PushConstant(7),
-            Opcode::PushConstant(1),
-            Opcode::PushConstant(1),
+            vm::Opcode::PushConstant(6),
+            vm::Opcode::PushConstant(1),
+            vm::Opcode::PushConstant(1),
             // sum *= i
-            Opcode::Dup(1),
-            Opcode::Multiply,
+            vm::Opcode::Dup(1),
+            vm::Opcode::Multiply,
             // i++
-            Opcode::Swap,
-            Opcode::PushConstant(1),
-            Opcode::Add,
-            Opcode::Swap,
+            vm::Opcode::Swap,
+            vm::Opcode::PushConstant(1),
+            vm::Opcode::Add,
+            vm::Opcode::Swap,
             // i <= max ?
-            Opcode::Dup(2),
-            Opcode::Dup(2),
-            Opcode::DumpStack,
-            Opcode::Subtract,
-            Opcode::BranchNotZero(3),
+            vm::Opcode::Dup(2),
+            vm::Opcode::Dup(2),
+            vm::Opcode::DumpStack,
+            vm::Opcode::Subtract,
+            vm::Opcode::BranchIfNotZero(3),
         ],
     };
-    run_program(factorial);
+    vm::run_program(factorial);
 }

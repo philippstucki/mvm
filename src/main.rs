@@ -1,3 +1,5 @@
+mod assemble;
+mod lexer;
 mod vm;
 
 fn main() {
@@ -66,7 +68,6 @@ fn main() {
             // i <= max ?
             vm::Opcode::Dup(2),
             vm::Opcode::Dup(2),
-            vm::Opcode::DumpStack,
             vm::Opcode::Subtract,
             vm::Opcode::BranchIfNotZero(3),
         ],

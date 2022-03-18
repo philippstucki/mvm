@@ -1,5 +1,4 @@
-mod assemble;
-mod lexer;
+mod compiler;
 mod vm;
 
 fn main() {

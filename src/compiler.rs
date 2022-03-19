@@ -5,10 +5,9 @@ type Predicate = fn(char) -> bool;
 // type CharPredicate = Fn(char) -> bool;
 
 enum ParserState {
-    StartOfLine,
     LabelOrInstruction,
+    Instruction,
     Argument,
-    Comment,
 }
 
 fn is_letter(c: char) -> bool {
@@ -25,13 +24,22 @@ fn is_whitespace(c: char) -> bool {
 pub struct Compiler<'a> {
     iit: Chars<'a>,
     state: ParserState,
+    output: Vec<Opcode>,
 }
 
 impl<'a> Compiler<'a> {
     pub fn new(input: &'static str) -> Self {
         Compiler {
             iit: input.chars(),
-            state: ParserState::StartOfLine,
+            state: ParserState::LabelOrInstruction,
+            output: Vec::new(),
+        }
+    }
+
+    fn read(&mut self) -> Option<char> {
+        match self.iit.next() {
+            None => None,
+            Some(c) => Some(c),
         }
     }
 
@@ -55,20 +63,49 @@ impl<'a> Compiler<'a> {
         token
     }
 
-    pub fn compile(&mut self) -> Vec<Opcode> {
-        let opcodes = Vec::new();
+    fn add_label(&mut self, label: String) {
+        println!("adding label: {}", label);
+    }
+
+    fn compile_instruction(&mut self, instruction: String) {
+        println!("compiling instruction: {}", instruction);
+
+        match instruction.to_lowercase().as_str() {
+            "push" => {}
+            "add" => {
+                self.output.push(Opcode::Add);
+            }
+            _ => println!("unknown instruction: {}", instruction),
+        }
+    }
+
+    pub fn compile(&mut self) {
         while let Some(c) = self.iit.next() {
             if is_letter(c) {
                 match self.state {
-                    ParserState::StartOfLine => {
-                        let mut token = self.read_until(|c| is_whitespace(c));
-                        token.insert(0, c);
-                        println!("token: {:?}", token)
+                    ParserState::LabelOrInstruction => {
+                        let mut token = vec![c];
+                        let mut word = self.read_until(|c| is_whitespace(c));
+                        token.append(&mut word);
+
+                        println!("token: {:?}", token);
+
+                        let last_c = token.last();
+
+                        match last_c {
+                            Some(c) if c == &':' => {
+                                self.add_label(String::from_iter(&token[0..token.len() - 1]));
+                            }
+                            Some(_) => {
+                                self.compile_instruction(String::from_iter(token));
+                            }
+                            _ => {}
+                        }
                     }
                     _ => panic!("Unexpected character: {}", c),
                 }
 
-                println!("letter: {}", c);
+                // println!("letter: {}", c);
             } else if c == ';' {
                 let comment = self.read_until(|c| c == '\n');
                 println!("comment: {:?}", comment)
@@ -76,7 +113,6 @@ impl<'a> Compiler<'a> {
                 println!("_  => {:?}", c)
             }
         }
-        opcodes
     }
 }
 
@@ -86,7 +122,8 @@ mod tests {
 
     #[test]
     fn test1() {
-        let mut c = Compiler::new("loop: add  12 ;comment");
-        let opcodes = c.compile();
+        let mut c = Compiler::new("add\nloop: add  12 ;comment\nsub");
+        c.compile();
+        println!("output: {:?}", c.output);
     }
 }

@@ -1,4 +1,4 @@
-type StackType = i16;
+pub type StackType = i16;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Opcode {

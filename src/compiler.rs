@@ -1,4 +1,6 @@
-use crate::vm::Opcode;
+use anyhow::{bail, Result};
+
+use crate::vm::{Opcode, StackType};
 use std::{collections::HashMap, iter::Peekable, str::Chars};
 
 #[derive(Debug)]
@@ -20,23 +22,11 @@ fn is_whitespace(c: char) -> bool {
     c == ' ' || c == '\t'
 }
 
-#[derive(Debug, Clone, Copy)]
-struct Instruction {
-    opcode: Opcode,
-    has_argument: bool,
-}
-
-fn get_instruction_opcode(instruction: String) -> Option<Instruction> {
+fn requires_argument(instruction: &str) -> Result<bool> {
     match instruction.to_lowercase().as_str() {
-        "add" => Some(Instruction {
-            opcode: Opcode::Add,
-            has_argument: false,
-        }),
-        "push" => Some(Instruction {
-            opcode: Opcode::PushConstant(0),
-            has_argument: true,
-        }),
-        _ => panic!("unknown instruction: {}", instruction),
+        "push" | "dup" | "bnz" => Ok(true),
+        "swp" | "add" | "sub" | "mul" => Ok(false),
+        _ => bail!("Unknown instruction: {}", instruction),
     }
 }
 
@@ -48,7 +38,7 @@ pub struct Compiler<'a> {
     output: Vec<Opcode>,
     currentToken: Vec<char>,
     currentCharacter: Option<char>,
-    currentInstruction: Option<Instruction>,
+    currentInstruction: Option<String>,
 }
 
 impl<'a> Compiler<'a> {
@@ -88,8 +78,15 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn compile_instruction(&mut self, instruction: Instruction) {
-        self.output.push(instruction.opcode);
+    fn compile_instruction(
+        &mut self,
+        instruction: &str,
+        argument: Option<StackType>,
+    ) -> Result<()> {
+        match instruction {
+            _ => bail!("unknown instruction {}", instruction),
+        }
+        // self.output.push(instruction_meta.opcode);
     }
 
     pub fn compile(&mut self) {
@@ -104,7 +101,7 @@ impl<'a> Compiler<'a> {
                     let c = self.iit.peek();
 
                     let token = String::from_iter(&self.currentToken);
-                    println!("loi: {:?}, p: {:?}", token, c);
+                    println!("label or instr: {:?}, p: {:?}", token, c);
 
                     match c {
                         Some(c) if c == &':' => {
@@ -115,15 +112,13 @@ impl<'a> Compiler<'a> {
                         }
                         _ => {
                             // is an instruction
-                            self.currentInstruction = get_instruction_opcode(token);
-
-                            let instr = self.currentInstruction.unwrap();
-
-                            if instr.has_argument {
+                            if requires_argument(&token).unwrap() {
+                                self.currentInstruction = Some(String::from(token));
                                 self.state = ParserState::Argument;
                             } else {
-                                self.compile_instruction(instr);
+                                self.compile_instruction(&token, None).unwrap();
                                 self.state = ParserState::LabelOrInstruction;
+                                self.currentInstruction = None;
                             }
                         }
                     }

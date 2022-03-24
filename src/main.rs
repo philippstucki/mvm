@@ -1,4 +1,5 @@
 mod compiler;
+mod opcode;
 mod vm;
 
 fn main() {

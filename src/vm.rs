@@ -1,6 +1,6 @@
 pub type StackType = i16;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Opcode {
     PushConstant(StackType),
 

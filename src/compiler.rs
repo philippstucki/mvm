@@ -83,25 +83,22 @@ impl<'a> Compiler<'a> {
         instruction: &str,
         argument: Option<StackType>,
     ) -> Result<()> {
-        match instruction {
-            "push" => Ok(self.output.push(Opcode::PushConstant(argument.unwrap()))),
-            "dup" => Ok(self.output.push(Opcode::Dup(argument.unwrap() as u16))),
-            "bnz" => Ok(self
-                .output
-                .push(Opcode::BranchIfNotZero(argument.unwrap() as u16))),
+        self.output.push(match instruction {
+            "push" => Opcode::PushConstant(argument.unwrap()),
+            "dup" => Opcode::Dup(argument.unwrap() as u16),
+            "bnz" => Opcode::BranchIfNotZero(argument.unwrap() as u16),
 
-            "drop" => Ok(self.output.push(Opcode::Swap)),
-            "swp" => Ok(self.output.push(Opcode::Swap)),
-            "add" => Ok(self.output.push(Opcode::Add)),
-            "sub" => Ok(self.output.push(Opcode::Subtract)),
-            "mul" => Ok(self.output.push(Opcode::Multiply)),
-
+            "drop" => Opcode::Swap,
+            "swp" => Opcode::Swap,
+            "add" => Opcode::Add,
+            "sub" => Opcode::Subtract,
+            "mul" => Opcode::Multiply,
             _ => bail!("unknown instruction {}", instruction),
-        }
-        // self.output.push(instruction_meta.opcode);
+        });
+        Ok(())
     }
 
-    pub fn compile(&mut self) {
+    pub fn compile(&mut self) -> Result<()> {
         loop {
             match self.state {
                 ParserState::LabelOrInstruction => {
@@ -129,7 +126,6 @@ impl<'a> Compiler<'a> {
                                 self.state = ParserState::Argument;
                             } else {
                                 self.compile_instruction(&token, None).unwrap();
-                                self.state = ParserState::LabelOrInstruction;
                                 self.current_instruction = None;
                             }
                         }
@@ -143,15 +139,19 @@ impl<'a> Compiler<'a> {
                     self.current_token = vec![];
                     self.read_while(is_digit);
 
-                    if let Ok(arg) = String::from_iter(&self.current_token).parse::<i16>() {
-                        println!("argument: {:?}", arg);
-
-                        self.compile_instruction(
-                            &(self.current_instruction.clone()).unwrap(),
-                            Some(arg),
-                        )
+                    let arg = String::from_iter(&self.current_token)
+                        .parse::<i16>()
                         .unwrap();
-                    }
+
+                    println!("argument: {:?}", arg);
+
+                    self.compile_instruction(
+                        &(self.current_instruction.clone()).unwrap(),
+                        Some(arg),
+                    )
+                    .unwrap();
+
+                    self.state = ParserState::LabelOrInstruction;
                 }
 
                 _ => break,
@@ -161,6 +161,7 @@ impl<'a> Compiler<'a> {
                 break;
             }
         }
+        Ok(())
     }
 }
 
@@ -169,23 +170,40 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test1() {
-        let mut c = Compiler::new("   loop:\n add");
-        c.compile();
-        println!("output: {:#?}", c);
+    fn no_arguments() {
+        let mut c = Compiler::new("add");
+        c.compile().unwrap();
+        assert_eq!(c.output, vec![Opcode::Add]);
     }
 
     #[test]
-    fn test2() {
-        let mut c = Compiler::new("  push   12");
-        c.compile();
-        println!("output: {:#?}", c);
+    fn with_argument() {
+        let mut c = Compiler::new("push 99");
+        c.compile().unwrap();
+
+        assert_eq!(c.output, vec![Opcode::PushConstant(99i16)]);
     }
 
     #[test]
-    fn test3() {
-        let mut c = Compiler::new("  add\n  sub\n");
-        c.compile();
-        println!("output: {:#?}", c);
+    fn trailing_leading_ws() {
+        let mut c = Compiler::new("\n\n push    \t 99  \n\n");
+        c.compile().unwrap();
+
+        assert_eq!(c.output, vec![Opcode::PushConstant(99i16)]);
+    }
+
+    #[test]
+    fn multiple_instructions() {
+        let mut c = Compiler::new("  push 1\n  push 1\n  add");
+        c.compile().unwrap();
+
+        assert_eq!(
+            c.output,
+            vec![
+                Opcode::PushConstant(1i16),
+                Opcode::PushConstant(1i16),
+                Opcode::Add
+            ]
+        );
     }
 }

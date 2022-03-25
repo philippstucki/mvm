@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 
-use crate::opcode::{Opcode, StackType};
+use crate::opcode::{Opcode, Reference, StackType};
 use std::{collections::HashMap, iter::Peekable, str::Chars};
 
 #[derive(Debug)]
@@ -22,6 +22,11 @@ fn is_whitespace(c: char) -> bool {
     c == ' ' || c == '\t' || c == '\n'
 }
 
+enum ArgumentType<I, S> {
+    None,
+    Int(I),
+    String(S),
+}
 fn requires_argument(instruction: &str) -> Result<bool> {
     match instruction.to_lowercase().as_str() {
         "push" | "dup" | "bnz" => Ok(true),
@@ -86,9 +91,8 @@ impl<'a> Compiler<'a> {
         self.output.push(match instruction {
             "push" => Opcode::PushConstant(argument.unwrap()),
             "dup" => Opcode::Dup(argument.unwrap() as u16),
-            "bnz" => Opcode::BranchIfNotZero(argument.unwrap() as u16),
-
-            "drop" => Opcode::Swap,
+            // "bnz" => Opcode::BranchIfNotZero(Reference::Unresolved(argument.unwrap())),
+            "drop" => Opcode::Drop,
             "swp" => Opcode::Swap,
             "add" => Opcode::Add,
             "sub" => Opcode::Subtract,

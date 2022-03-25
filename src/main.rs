@@ -69,7 +69,7 @@ fn main() {
             opcode::Opcode::Dup(2),
             opcode::Opcode::Dup(2),
             opcode::Opcode::Subtract,
-            opcode::Opcode::BranchIfNotZero(3),
+            opcode::Opcode::BranchIfNotZero(opcode::Reference::Resolved(3)),
         ],
     };
     vm::run_program(factorial);

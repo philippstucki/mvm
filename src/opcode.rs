@@ -1,5 +1,12 @@
 pub type StackType = i16;
 pub type AddressType = u16;
+pub type ReferenceType = [char; 20];
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Reference<A> {
+    Resolved(A),
+    Unresolved(ReferenceType),
+}
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum GenericOpcode<S, A> {
@@ -10,7 +17,7 @@ pub enum GenericOpcode<S, A> {
     Add,
     Subtract,
     Multiply,
-    BranchIfNotZero(A),
+    BranchIfNotZero(Reference<A>),
     Halt,
 }
 

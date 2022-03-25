@@ -73,16 +73,17 @@ pub fn run_program(program: Program) {
                 vm.stack.push(op1 * op2);
             }
 
-            Opcode::BranchIfNotZero(destination) => {
+            Opcode::BranchIfNotZero(crate::opcode::Reference::Resolved(destination)) => {
                 let op = vm.stack.pop().unwrap();
                 if op != 0 {
                     vm.pc = destination as usize;
                 }
             }
 
-            // Opcode::DumpStack => {
-            //     println!("\n{:?}", vm.stack);
-            // }
+            Opcode::BranchIfNotZero(crate::opcode::Reference::Unresolved(reference)) => {
+                panic!("Unresolved reference used: {:?}", reference);
+            }
+
             Opcode::Halt => {
                 break;
             }

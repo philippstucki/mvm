@@ -1,23 +1,4 @@
-pub type StackType = i16;
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Opcode {
-    PushConstant(StackType),
-
-    Drop,
-    Dup(u16),
-    Swap,
-
-    Add,
-    Subtract,
-    Multiply,
-
-    BranchIfNotZero(u16),
-
-    DumpStack,
-    Halt,
-}
-
+use crate::opcode::{AddressType, Opcode, StackType};
 #[derive(Debug)]
 pub struct Program {
     pub opcodes: Vec<Opcode>,
@@ -99,10 +80,9 @@ pub fn run_program(program: Program) {
                 }
             }
 
-            Opcode::DumpStack => {
-                println!("\n{:?}", vm.stack);
-            }
-
+            // Opcode::DumpStack => {
+            //     println!("\n{:?}", vm.stack);
+            // }
             Opcode::Halt => {
                 break;
             }

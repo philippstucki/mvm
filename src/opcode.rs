@@ -1,7 +1,8 @@
-type StackType = i16;
-type AddressType = u16;
+pub type StackType = i16;
+pub type AddressType = u16;
 
-enum Opcode<S, A> {
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum GenericOpcode<S, A> {
     PushConstant(S),
     Drop,
     Dup(A),
@@ -13,4 +14,4 @@ enum Opcode<S, A> {
     Halt,
 }
 
-pub type Instruction = Opcode<StackType, AddressType>;
+pub type Opcode = GenericOpcode<StackType, AddressType>;

@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 
-use crate::vm::{Opcode, StackType};
+use crate::opcode::{Opcode, StackType};
 use std::{collections::HashMap, iter::Peekable, str::Chars};
 
 #[derive(Debug)]
@@ -117,7 +117,6 @@ impl<'a> Compiler<'a> {
                             // is a label
                             self.iit.next(); // consume complete label
                             self.labels.insert(token, self.output.len() as u16);
-                            self.state = ParserState::Instruction;
                         }
                         _ if token.len() > 0 => {
                             // is an instruction
@@ -205,5 +204,14 @@ mod tests {
                 Opcode::Add
             ]
         );
+    }
+
+    #[test]
+    fn label_bnz() {
+        let mut c = Compiler::new("loop: push 1\nbnz 0");
+        c.compile().unwrap();
+        println!("{:?}", c);
+
+        // assert_eq!(c.output, vec![]);
     }
 }

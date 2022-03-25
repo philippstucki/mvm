@@ -18,9 +18,9 @@ fn main() {
 
     let mul_ints: vm::Program = vm::Program {
         opcodes: vec![
-            vm::Opcode::PushConstant(3),
-            vm::Opcode::PushConstant(4),
-            vm::Opcode::Multiply,
+            opcode::Opcode::PushConstant(3),
+            opcode::Opcode::PushConstant(4),
+            opcode::Opcode::Multiply,
         ],
     };
     vm::run_program(mul_ints);
@@ -54,22 +54,22 @@ fn main() {
     let factorial: vm::Program = vm::Program {
         opcodes: vec![
             // init: [max, i, prod]
-            vm::Opcode::PushConstant(6),
-            vm::Opcode::PushConstant(1),
-            vm::Opcode::PushConstant(1),
+            opcode::Opcode::PushConstant(6),
+            opcode::Opcode::PushConstant(1),
+            opcode::Opcode::PushConstant(1),
             // sum *= i
-            vm::Opcode::Dup(1),
-            vm::Opcode::Multiply,
+            opcode::Opcode::Dup(1),
+            opcode::Opcode::Multiply,
             // i++
-            vm::Opcode::Swap,
-            vm::Opcode::PushConstant(1),
-            vm::Opcode::Add,
-            vm::Opcode::Swap,
+            opcode::Opcode::Swap,
+            opcode::Opcode::PushConstant(1),
+            opcode::Opcode::Add,
+            opcode::Opcode::Swap,
             // i <= max ?
-            vm::Opcode::Dup(2),
-            vm::Opcode::Dup(2),
-            vm::Opcode::Subtract,
-            vm::Opcode::BranchIfNotZero(3),
+            opcode::Opcode::Dup(2),
+            opcode::Opcode::Dup(2),
+            opcode::Opcode::Subtract,
+            opcode::Opcode::BranchIfNotZero(3),
         ],
     };
     vm::run_program(factorial);

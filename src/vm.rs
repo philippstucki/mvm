@@ -20,14 +20,14 @@ pub fn run_program(program: Program) {
             break;
         }
 
-        let opcode = program.opcodes[vm.pc];
+        let opcode = &program.opcodes[vm.pc];
         print!("{:04}: {:?}", vm.pc, opcode);
 
         vm.pc += 1;
 
         match opcode {
             Opcode::PushConstant(value) => {
-                vm.stack.push(value);
+                vm.stack.push(*value);
             }
 
             Opcode::Drop => {
@@ -35,7 +35,8 @@ pub fn run_program(program: Program) {
             }
 
             Opcode::Dup(idx) => {
-                vm.stack.push(vm.stack[vm.stack.len() - 1 - (idx as usize)]);
+                vm.stack
+                    .push(vm.stack[vm.stack.len() - 1 - (*idx as usize)]);
             }
 
             Opcode::Swap => {
@@ -76,7 +77,7 @@ pub fn run_program(program: Program) {
             Opcode::BranchIfNotZero(crate::opcode::Reference::Resolved(destination)) => {
                 let op = vm.stack.pop().unwrap();
                 if op != 0 {
-                    vm.pc = destination as usize;
+                    vm.pc = *destination as usize;
                 }
             }
 

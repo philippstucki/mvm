@@ -1,14 +1,13 @@
 pub type StackType = i16;
 pub type AddressType = u16;
-pub type ReferenceType = [char; 20];
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Reference<A> {
     Resolved(A),
-    Unresolved(ReferenceType),
+    Unresolved(String),
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum GenericOpcode<S, A> {
     PushConstant(S),
     Drop,

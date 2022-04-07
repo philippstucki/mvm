@@ -22,6 +22,10 @@ fn is_whitespace(c: char) -> bool {
     c == ' ' || c == '\t' || c == '\n'
 }
 
+fn parse_number(s: &str) -> StackType {
+    s.parse::<StackType>().unwrap()
+}
+
 enum ArgumentType<I, S> {
     None,
     Int(I),
@@ -83,15 +87,13 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn compile_instruction(
-        &mut self,
-        instruction: &str,
-        argument: Option<StackType>,
-    ) -> Result<()> {
+    fn compile_instruction(&mut self, instruction: &str, argument: Option<&str>) -> Result<()> {
         self.output.push(match instruction {
-            "push" => Opcode::PushConstant(argument.unwrap()),
-            "dup" => Opcode::Dup(argument.unwrap() as u16),
-            // "bnz" => Opcode::BranchIfNotZero(Reference::Unresolved(argument.unwrap())),
+            "push" => Opcode::PushConstant(parse_number(argument.unwrap())),
+            "dup" => Opcode::Dup(parse_number(argument.unwrap()) as u16),
+            "bnz" => {
+                Opcode::BranchIfNotZero(Reference::Unresolved(String::from(argument.unwrap())))
+            }
             "drop" => Opcode::Drop,
             "swp" => Opcode::Swap,
             "add" => Opcode::Add,
@@ -140,17 +142,11 @@ impl<'a> Compiler<'a> {
                     self.read_while(is_whitespace);
 
                     self.current_token = vec![];
-                    self.read_while(is_digit);
-
-                    let arg = String::from_iter(&self.current_token)
-                        .parse::<i16>()
-                        .unwrap();
-
-                    println!("argument: {:?}", arg);
+                    self.read_while(|c| is_digit(c) || is_letter(c));
 
                     self.compile_instruction(
                         &(self.current_instruction.clone()).unwrap(),
-                        Some(arg),
+                        Some(&String::from_iter(&self.current_token)),
                     )
                     .unwrap();
 
@@ -212,7 +208,7 @@ mod tests {
 
     #[test]
     fn label_bnz() {
-        let mut c = Compiler::new("loop: push 1\nbnz 0");
+        let mut c = Compiler::new("loop: push 1\nbnz loop");
         c.compile().unwrap();
         println!("{:?}", c);
 

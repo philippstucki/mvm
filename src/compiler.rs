@@ -44,7 +44,6 @@ pub struct Compiler<'a> {
     iit: Peekable<Chars<'a>>,
     state: ParserState,
     labels: HashMap<String, u16>,
-    output: Vec<Opcode>,
     current_token: Vec<char>,
     current_character: Option<char>,
     current_instruction: Option<String>,
@@ -56,7 +55,6 @@ impl<'a> Compiler<'a> {
             iit: input.chars().peekable(),
             state: ParserState::LabelOrInstruction,
             labels: HashMap::new(),
-            output: vec![],
             current_token: vec![],
             current_character: None,
             current_instruction: None,
@@ -87,8 +85,8 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn compile_instruction(&mut self, instruction: &str, argument: Option<&str>) -> Result<()> {
-        self.output.push(match instruction {
+    fn compile_instruction(&mut self, instruction: &str, argument: Option<&str>) -> Result<Opcode> {
+        Ok(match instruction {
             "push" => Opcode::PushConstant(parse_number(argument.unwrap())),
             "dup" => Opcode::Dup(parse_number(argument.unwrap()) as u16),
             "bnz" => {
@@ -100,11 +98,12 @@ impl<'a> Compiler<'a> {
             "sub" => Opcode::Subtract,
             "mul" => Opcode::Multiply,
             _ => bail!("unknown instruction {}", instruction),
-        });
-        Ok(())
+        })
     }
 
-    pub fn compile(&mut self) -> Result<()> {
+    pub fn compile(&mut self) -> Result<Vec<Opcode>> {
+        let mut pass1 = vec![];
+
         loop {
             match self.state {
                 ParserState::LabelOrInstruction => {
@@ -122,7 +121,7 @@ impl<'a> Compiler<'a> {
                         Some(c) if c == &':' => {
                             // is a label
                             self.iit.next(); // consume complete label
-                            self.labels.insert(token, self.output.len() as u16);
+                            self.labels.insert(token, pass1.len() as u16);
                         }
                         _ if token.len() > 0 => {
                             // is an instruction
@@ -130,7 +129,7 @@ impl<'a> Compiler<'a> {
                                 self.current_instruction = Some(String::from(token));
                                 self.state = ParserState::Argument;
                             } else {
-                                self.compile_instruction(&token, None).unwrap();
+                                pass1.push(self.compile_instruction(&token, None).unwrap());
                                 self.current_instruction = None;
                             }
                         }
@@ -144,11 +143,13 @@ impl<'a> Compiler<'a> {
                     self.current_token = vec![];
                     self.read_while(|c| is_digit(c) || is_letter(c));
 
-                    self.compile_instruction(
-                        &(self.current_instruction.clone()).unwrap(),
-                        Some(&String::from_iter(&self.current_token)),
-                    )
-                    .unwrap();
+                    pass1.push(
+                        self.compile_instruction(
+                            &(self.current_instruction.clone()).unwrap(),
+                            Some(&String::from_iter(&self.current_token)),
+                        )
+                        .unwrap(),
+                    );
 
                     self.state = ParserState::LabelOrInstruction;
                 }
@@ -160,7 +161,20 @@ impl<'a> Compiler<'a> {
                 break;
             }
         }
-        Ok(())
+
+        Ok(pass1
+            .into_iter()
+            .map(|opcode| match opcode {
+                Opcode::BranchIfNotZero(Reference::Unresolved(reference)) => {
+                    if let Some(adr) = self.labels.get(&reference) {
+                        Opcode::BranchIfNotZero(Reference::Resolved(*adr))
+                    } else {
+                        panic!("undefined reference: {}", reference);
+                    }
+                }
+                opcode => opcode,
+            })
+            .collect::<Vec<Opcode>>())
     }
 }
 
@@ -171,33 +185,33 @@ mod tests {
     #[test]
     fn no_arguments() {
         let mut c = Compiler::new("add");
-        c.compile().unwrap();
-        assert_eq!(c.output, vec![Opcode::Add]);
+        let output = c.compile().unwrap();
+        assert_eq!(output, vec![Opcode::Add]);
     }
 
     #[test]
     fn with_argument() {
         let mut c = Compiler::new("push 99");
-        c.compile().unwrap();
+        let output = c.compile().unwrap();
 
-        assert_eq!(c.output, vec![Opcode::PushConstant(99i16)]);
+        assert_eq!(output, vec![Opcode::PushConstant(99i16)]);
     }
 
     #[test]
     fn trailing_leading_ws() {
         let mut c = Compiler::new("\n\n push    \t 99  \n\n");
-        c.compile().unwrap();
+        let output = c.compile().unwrap();
 
-        assert_eq!(c.output, vec![Opcode::PushConstant(99i16)]);
+        assert_eq!(output, vec![Opcode::PushConstant(99i16)]);
     }
 
     #[test]
     fn multiple_instructions() {
         let mut c = Compiler::new("  push 1\n  push 1\n  add");
-        c.compile().unwrap();
+        let output = c.compile().unwrap();
 
         assert_eq!(
-            c.output,
+            output,
             vec![
                 Opcode::PushConstant(1i16),
                 Opcode::PushConstant(1i16),
@@ -208,10 +222,17 @@ mod tests {
 
     #[test]
     fn label_bnz() {
-        let mut c = Compiler::new("loop: push 1\nbnz loop");
-        c.compile().unwrap();
-        println!("{:?}", c);
+        let mut c = Compiler::new("loopa: push 10\n loopb:  push 10\nbnz loopb");
+        let output = c.compile().unwrap();
+        println!("{:?}", output);
 
-        // assert_eq!(c.output, vec![]);
+        assert_eq!(
+            output,
+            vec![
+                Opcode::PushConstant(10i16),
+                Opcode::PushConstant(10i16),
+                Opcode::BranchIfNotZero(Reference::Resolved(1))
+            ]
+        );
     }
 }

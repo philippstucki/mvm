@@ -6,7 +6,6 @@ use std::{collections::HashMap, iter::Peekable, str::Chars};
 #[derive(Debug)]
 enum ParserState {
     LabelOrInstruction,
-    Instruction,
     Argument,
 }
 
@@ -26,11 +25,6 @@ fn parse_number(s: &str) -> StackType {
     s.parse::<StackType>().unwrap()
 }
 
-enum ArgumentType<I, S> {
-    None,
-    Int(I),
-    String(S),
-}
 fn requires_argument(instruction: &str) -> Result<bool> {
     match instruction.to_lowercase().as_str() {
         "push" | "dup" | "bnz" => Ok(true),
@@ -45,7 +39,6 @@ pub struct Compiler<'a> {
     state: ParserState,
     labels: HashMap<String, u16>,
     current_token: Vec<char>,
-    current_character: Option<char>,
     current_instruction: Option<String>,
 }
 
@@ -56,13 +49,8 @@ impl<'a> Compiler<'a> {
             state: ParserState::LabelOrInstruction,
             labels: HashMap::new(),
             current_token: vec![],
-            current_character: None,
             current_instruction: None,
         }
-    }
-
-    fn read(&mut self) {
-        self.current_character = self.iit.next();
     }
 
     fn read_while<P>(&mut self, pred: P)
@@ -97,6 +85,7 @@ impl<'a> Compiler<'a> {
             "add" => Opcode::Add,
             "sub" => Opcode::Subtract,
             "mul" => Opcode::Multiply,
+            "halt" => Opcode::Halt,
             _ => bail!("unknown instruction {}", instruction),
         })
     }
@@ -153,8 +142,6 @@ impl<'a> Compiler<'a> {
 
                     self.state = ParserState::LabelOrInstruction;
                 }
-
-                _ => break,
             }
 
             if self.iit.peek() == None {

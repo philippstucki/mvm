@@ -1,4 +1,4 @@
-use crate::opcode::{AddressType, Opcode, StackType};
+use crate::opcode::{Opcode, StackType};
 #[derive(Debug)]
 pub struct Program {
     pub opcodes: Vec<Opcode>,

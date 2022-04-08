@@ -1,16 +1,16 @@
-        push 6      ; init loop: [max, i, prod]
+        push 6
         push 1
         push 1
 
-floop:  dup 1       ; sum *= i
+floop:  dup 1
         mul
 
-        swp         ; i++
+        swp
         push 1
         add
         swp
 
-        dup 2       ; i <= max ?
+        dup 2
         dup 2
         sub
         bnz floop

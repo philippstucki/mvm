@@ -1,5 +1,6 @@
-        push 6      ; hello
+
         push 6
+        push 12
 
         add
 

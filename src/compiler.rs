@@ -50,7 +50,7 @@ pub struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    pub fn new(input: &'static str) -> Self {
+    pub fn new(input: &'a str) -> Self {
         Compiler {
             iit: input.chars().peekable(),
             state: ParserState::LabelOrInstruction,
